@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "esbuild src/app.jsx --bundle --minify --target=es2020 --legal-comments=eof --outfile=assets/app.js"
+    "build": "esbuild src/app.jsx --bundle --minify --target=es2020 --legal-comments=eof --outfile=assets/app.js && esbuild src/survey.js --bundle --minify --target=es2020 --legal-comments=eof --global-name=portfolioSurvey --outfile=assets/survey.js"
   },
   "dependencies": {
     "react": "19.3.1",

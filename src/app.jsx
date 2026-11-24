@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { maps, videos } from './projects';
-import { drawSurvey } from './survey';
+import { education, experience, summary } from './profile';
 
 const asset = (filename) => `assets/${filename}`;
 const pages = {
   home: ['Home', 'index.html'],
   editing: ['Photo & Video', 'editing.html'],
   planning: ['GIS & Planning', 'planning.html'],
+  about: ['About', 'about.html'],
 };
 const page = document.body.dataset.page;
 
@@ -34,7 +35,7 @@ function Header() {
     <a className="skip" href="#main">Skip to content</a>
     <header className="site-header">
       <div className="header-inner wrap">
-        <a className="brand" href="index.html"><Mark/><span>Nabil Makarim</span></a>
+        <a className="brand" href="index.html"><span className="brand-portrait"><img src={asset('portrait.webp')} alt="" width="54" height="54"/></span><span>Nabil Makarim</span></a>
         <nav aria-label="Main navigation">
           {Object.entries(pages).map(([key, [label, href]]) => <a key={key} href={href} aria-current={key === page ? 'page' : undefined}>{label}</a>)}
         </nav>
@@ -50,7 +51,24 @@ function Footer() {
 function HeroStage() {
   const stage = useRef(null);
   const survey = useRef(null);
-  useEffect(() => drawSurvey(survey.current, stage.current), []);
+  useEffect(() => {
+    const script = document.createElement('script');
+    const canvas = survey.current;
+    const panel = stage.current;
+    let dispose;
+    script.src = asset('survey.js');
+    script.onload = () => { dispose = window.portfolioSurvey.drawSurvey(canvas, panel); };
+    const load = () => document.head.append(script);
+    const idle = typeof window.requestIdleCallback === 'function';
+    const task = idle ? window.requestIdleCallback(load, { timeout: 800 }) : window.setTimeout(load, 120);
+    return () => {
+      if (idle) window.cancelIdleCallback(task);
+      else window.clearTimeout(task);
+      script.onload = null;
+      script.remove();
+      dispose?.();
+    };
+  }, []);
   return <div className="hero-stage" ref={stage}>
     <canvas className="survey" ref={survey} aria-hidden="true"/>
     <span className="stage-cross cross-one" aria-hidden="true"/>
@@ -61,7 +79,7 @@ function HeroStage() {
       <span className="hero-play"><Icon name="play" size={23}/></span>
     </a>
     <a className="hero-print hero-map" href="planning.html#kdh" aria-label="Explore the KDH green space map">
-      <img src={asset('kdh.webp')} alt="Green space plan showing landscaped areas around a sports complex" fetchPriority="high"/>
+      <img src={asset('kdh-cover.webp')} alt="Green space plan showing landscaped areas around a sports complex" fetchPriority="high"/>
       <span className="frame-caption"><span>Green space map</span><span>KDH</span></span>
     </a>
   </div>;
@@ -72,7 +90,7 @@ function Home() {
     <section className="home-hero wrap" aria-labelledby="home-title">
       <div className="hero-copy">
         <h1 id="home-title" aria-label="Nabil Makarim">Nabil<br/>Makarim<span aria-hidden="true">.</span></h1>
-        <p>I edit video and use GIS to study how cities are planned.</p>
+        <p>{summary}</p>
         <a className="button primary" href="#work"><Icon name="grid" size={17}/> Explore my work</a>
       </div>
       <HeroStage/>
@@ -85,7 +103,7 @@ function Home() {
           <div className="collection-label"><div><h3>Photo &amp; Video Editing</h3><p>City footage and short-form edits</p></div><span>4 videos</span></div>
         </a>
         <a className="collection planning-collection" href="planning.html">
-          <div className="collection-image"><img src={asset('kdb.webp')} alt="Building coverage map with parcels shaded red and yellow" loading="lazy"/><span className="collection-icon"><Icon name="map"/></span></div>
+          <div className="collection-image"><img src={asset('kdb-cover.webp')} alt="Building coverage map with parcels shaded red and yellow" loading="lazy"/><span className="collection-icon"><Icon name="map"/></span></div>
           <div className="collection-label"><div><h3>GIS &amp; Urban Planning</h3><p>Site maps and spatial analysis</p></div><span>3 maps + lab</span></div>
         </a>
       </div>
@@ -194,7 +212,7 @@ function MapViewer({ map }) {
         <button className="icon-button" aria-label="Reset zoom" disabled={zoom === 1} onClick={() => changeZoom(1)}><Icon name="reset" size={17}/></button>
       </div>
     </div>
-    <div className={zoom > 1 ? 'map-window is-zoomed' : 'map-window'} role="region" aria-label={`${map.label} map image. Use the arrow keys or drag to pan when zoomed.`} ref={pane} tabIndex={0} onPointerDown={startPan} onPointerMove={pan} onLostPointerCapture={() => { drag.current = null; }}>
+    <div className={zoom > 1 ? 'map-window is-zoomed' : 'map-window'} role="region" aria-label={`${map.label} map image. Use the arrow keys, drag, or swipe to pan when zoomed.`} ref={pane} tabIndex={zoom > 1 ? 0 : undefined} onPointerDown={startPan} onPointerMove={pan} onLostPointerCapture={() => { drag.current = null; }}>
       <img src={asset(`${map.id}${zoom > 1 ? '-full' : ''}.webp`)} width="4959" height="3509" alt={`${map.localTitle} site plan with a color-coded legend`} draggable="false" style={{ width: `${zoom * 100}%` }}/>
     </div>
   </div>;
@@ -228,18 +246,50 @@ function Planning() {
           <h2>{map.title}</h2>
           <p className="local-title" lang="id">{map.localTitle}</p>
           <p>{map.description}</p>
+          <p>{map.reading}</p>
+          <div className="map-key" role="group" aria-label={`${map.label} map legend`}>
+            <p>Map legend</p>
+            <ul>{map.bands.map(([label, color]) => <li key={label}><span className="map-swatch" style={{ backgroundColor: color }} aria-hidden="true"/>{label}</li>)}</ul>
+            <p className="map-symbols">The red dotted line marks the study boundary. Gray marks building parcels.</p>
+          </div>
         </div>
         <a className="text-link" href={asset(`${map.id}-full.webp`)} target="_blank" rel="noopener">Open full-resolution map <Icon name="external" size={15}/></a>
       </div>
       <MapViewer key={map.id} map={map}/>
     </section>
     <section className="lab" id="space-syntax" aria-labelledby="lab-title">
-      <div className="lab-copy"><h2 id="lab-title">Space Syntax Lab</h2><p>Build a J-Graph, calculate spatial integration, and compare it with connectivity.</p><a className="button light" href={asset('space-syntax-lab.html')}>Open Space Syntax Lab <Icon name="external" size={17}/></a></div>
+      <div className="lab-copy"><h2 id="lab-title">Space Syntax Lab</h2><p>Load the sample network or build your own. Compare how many direct connections a room has with how many steps it takes to reach the rest of the graph.</p><a className="button light" href={asset('space-syntax-lab.html')}>Open Space Syntax Lab <Icon name="external" size={17}/></a></div>
       <img className="lab-preview" src={asset('lab-preview.webp')} alt="A J-Graph of connected spaces with an integration results table" loading="lazy"/>
     </section>
     <a className="next-collection" href="editing.html"><Icon name="play"/> Explore Photo &amp; Video Editing</a>
   </main>;
 }
 
-const CurrentPage = { home: Home, editing: Editing, planning: Planning }[page] ?? Home;
+function About() {
+  return <main id="main" className="interior wrap">
+    <div className="page-intro"><h1>About</h1></div>
+    <div className="profile-layout">
+      <section className="education" aria-labelledby="education-title">
+        <h2 id="education-title">Education</h2>
+        <h3>{education.program}</h3>
+        <p className="profile-organization">{education.institution}</p>
+        <p className="profile-dates">{education.dates}</p>
+        <p className="profile-gpa">GPA {education.gpa}</p>
+        <p className="profile-description">{education.thesis}</p>
+      </section>
+      <section aria-labelledby="experience-title">
+        <h2 id="experience-title">Experience</h2>
+        <ul className="experience-list">
+          {experience.map(({ role, organization, dates, description }) => <li key={role}>
+            <div className="experience-heading"><h3>{role}</h3><p className="profile-dates">{dates}</p></div>
+            <p className="profile-organization">{organization}</p>
+            <p className="profile-description">{description}</p>
+          </li>)}
+        </ul>
+      </section>
+    </div>
+  </main>;
+}
+
+const CurrentPage = { home: Home, editing: Editing, planning: Planning, about: About }[page] ?? Home;
 createRoot(document.querySelector('#app')).render(<><Header/><CurrentPage/><Footer/></>);

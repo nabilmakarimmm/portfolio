@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Space Syntax Lab — Simulasi J-Graph &amp; Integration</title>
+<link rel="stylesheet" href="type-scale.css">
 <style>
-  @font-face{font-family:Montserrat;src:url('Montserrat-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
-  @font-face{font-family:Montserrat;src:url('Montserrat-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap;}
   :root{
     --bg:#14171c;
     --panel:#1c2129;
@@ -17,24 +16,24 @@
     --accent:#e8b04b;      /* amber — used sparingly, "high integration" */
     --cold:#3f7fd1;        /* blue — "low integration" */
     --warm:#d1483f;        /* red — "high integration" */
-    --mono:'IBM Plex Mono', 'Courier New', monospace;
-    --sans:Montserrat,'Segoe UI',sans-serif;
+    --warning:#ff9f92;
   }
   *{box-sizing:border-box;}
   body{
+    --heading-h1:1.3125rem;
     margin:0; background:var(--bg); color:var(--text);
-    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    -webkit-font-smoothing:antialiased;
   }
   header{
     padding:22px 28px 14px 28px; border-bottom:1px solid var(--line);
     display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
   }
   header .eyebrow{
-    font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+    font-size:11px; letter-spacing:.14em;
     color:var(--accent); text-transform:uppercase;
   }
-  h1{font-size:20px; margin:0; font-weight:650; letter-spacing:.2px;}
-  header p{margin:0; color:var(--muted); font-size:13px; font-family:var(--mono);}
+  h1{margin:0; font-weight:650; letter-spacing:.2px;}
+  header p{margin:0; color:var(--muted); font-size:13px;}
   .portfolio-link{display:inline-block;margin:0 28px 14px;color:var(--accent);font-size:13px;text-underline-offset:4px;}
 
   .wrap{max-width:1280px; margin:0 auto; padding:20px 24px 60px;}
@@ -47,25 +46,27 @@
     padding:16px 18px 18px;
   }
   .card h2{
-    font-size:13px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.09em;
-    color:var(--muted); font-weight:600; display:flex; align-items:center; gap:8px;
+    margin:0 0 12px; text-transform:uppercase; letter-spacing:.09em;
+    color:var(--muted); font-weight:600; display:flex; align-items:center; flex-wrap:wrap; gap:8px;
   }
   .card h2 .n{
-    font-family:var(--mono); color:var(--accent); font-size:12px; border:1px solid var(--line);
+    color:var(--accent); font-size:12px; border:1px solid var(--line);
     background:var(--panel-2); border-radius:4px; padding:1px 7px;
   }
 
   .toolbar{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;}
   button{
-    font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--text);
+    font-family:inherit; font-size:.875rem; font-weight:600; color:var(--text); min-height:44px;
     background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
     padding:7px 12px; cursor:pointer; transition:.12s;
   }
   button:hover{border-color:var(--accent); color:var(--accent);}
   button.active{background:var(--accent); color:#1a1a1a; border-color:var(--accent);}
   button.ghost{background:transparent;}
-  button.primary{background:var(--warm); border-color:var(--warm); color:#fff;}
+  button.primary{background:#a93731; border-color:#a93731; color:#fff;}
   button.primary:hover{color:#fff; opacity:.9;}
+  :focus-visible{outline:3px solid var(--accent); outline-offset:3px;}
+  button:disabled,select:disabled{opacity:.55;cursor:default;}
 
   #graphCanvas{
     width:100%; height:420px; display:block; border-radius:8px;
@@ -75,13 +76,20 @@
       var(--bg);
     border:1px solid var(--line); cursor:crosshair;
   }
-  .hint{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:8px; line-height:1.6;}
+  .hint{font-size:.8125rem; color:var(--muted); margin-top:8px; line-height:1.6;}
   .hint b{color:var(--text);}
+  .graph-tools{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);}
+  .graph-tools summary{min-height:44px;padding-block:11px;cursor:pointer;font-weight:600;}
+  .room-fields{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .room-fields label{display:grid;gap:4px;flex:1 1 130px;font-size:.875rem;}
+  .room-fields select{min-height:44px;padding:7px;color:var(--text);background:var(--panel-2);border:1px solid var(--muted);border-radius:6px;font:inherit;}
+  #edgeSummary{display:block;margin-bottom:10px;}
+  .result-scroll{max-height:420px;overflow:auto;}
 
-  table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px;}
+  table{width:100%; border-collapse:collapse; font-size:12px; font-variant-numeric:tabular-nums;}
   th,td{padding:6px 8px; text-align:right; border-bottom:1px solid var(--line);}
   th:first-child,td:first-child{text-align:left;}
-  th{color:var(--muted); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;}
+  th{color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.035em;}
   tbody tr:hover{background:var(--panel-2);}
   .node-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle;}
 
@@ -90,20 +98,22 @@
     flex:1; min-width:120px; background:var(--panel-2); border:1px solid var(--line);
     border-radius:8px; padding:10px 12px;
   }
-  .stat .label{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
-  .stat .val{font-family:var(--mono); font-size:19px; font-weight:600; margin-top:2px;}
+  .stat .label{font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
+  .stat .val{font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:2px;}
   .stat .val.warm{color:var(--warm);}
   .stat .val.cold{color:var(--cold);}
   .stat .val.accent{color:var(--accent);}
 
-  .legend{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:8px;}
+  .legend{display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:.75rem; color:var(--muted); margin-top:8px;}
   .legend .bar{width:120px; height:8px; border-radius:4px; background:linear-gradient(90deg, var(--cold), #7d8fae 40%, var(--warm));}
 
   #chartCanvas{width:100%; height:320px; display:block; background:var(--bg); border:1px solid var(--line); border-radius:8px;}
 
-  .formula-note{font-family:var(--mono); font-size:10.5px; color:var(--muted); line-height:1.7; margin-top:6px;}
-  .warn{color:var(--warm); font-family:var(--mono); font-size:12px; margin-top:8px;}
-  .ok{color:#5fbf7c; font-family:var(--mono); font-size:12px; margin-top:8px;}
+  .formula-note{font-size:.75rem; color:var(--muted); line-height:1.7; margin-top:6px;}
+  .result-status{color:var(--muted);font-size:.8125rem;margin:8px 0 0;}
+  .warn{color:var(--warning); font-size:.8125rem; margin:8px 0 0;}
+  .warn:empty,.result-status:empty,#connMsg:empty{margin:0;}
+  .ok{color:#5fbf7c; font-size:12px; margin-top:8px;}
 
   ::selection{background:var(--accent); color:#1a1a1a;}
   #graphCanvas{touch-action:none;}
@@ -123,28 +133,42 @@
 </header>
 <a class="portfolio-link" href="../planning.html">Kembali ke portofolio GIS</a>
 
-<div class="wrap">
+<main class="wrap">
   <div class="grid">
 
     <!-- LEFT: Graph builder -->
     <div class="card">
       <h2>01 · Bangun J-Graph <span class="n" id="nodeCount">N = 0</span></h2>
       <div class="toolbar">
-        <button id="modeAdd" class="active">+ Tambah Ruang</button>
-        <button id="modeConnect">⟷ Hubungkan</button>
-        <button id="modeMove">✥ Geser</button>
-        <button id="modeDelete">✕ Hapus</button>
+        <button id="modeAdd" class="active" aria-pressed="true">+ Tambah Ruang</button>
+        <button id="modeConnect" aria-pressed="false">⟷ Hubungkan</button>
+        <button id="modeMove" aria-pressed="false">✥ Geser</button>
+        <button id="modeDelete" aria-pressed="false">✕ Hapus</button>
         <button id="loadExample" class="ghost">Muat Contoh</button>
         <button id="clearAll" class="ghost">Bersihkan</button>
       </div>
-      <canvas id="graphCanvas" width="900" height="420"></canvas>
+      <canvas id="graphCanvas" width="900" height="420" role="img" aria-label="Diagram J-Graph. Gunakan kontrol papan ketik untuk mengubah ruang dan koneksi."></canvas>
       <div class="hint">
         <b>Tambah Ruang</b>: klik kanvas untuk menempatkan node (ruang/segmen).<br>
         <b>Hubungkan</b>: klik node A lalu node B untuk membuat koneksi (edge).<br>
         <b>Geser</b>: seret node untuk merapikan tata letak.<br>
         <b>Hapus</b>: klik node untuk menghapusnya beserta koneksinya.
       </div>
-      <div id="connMsg" class="warn" style="display:none;"></div>
+      <details class="graph-tools">
+        <summary>Kontrol papan ketik</summary>
+        <p class="hint">Ruang baru ditempatkan otomatis. Geser posisi ruang pada diagram jika diperlukan.</p>
+        <div class="room-fields">
+          <label>Ruang awal <select id="roomFrom"></select></label>
+          <label>Ruang tujuan <select id="roomTo"></select></label>
+        </div>
+        <div class="toolbar" role="group" aria-label="Ubah jaringan ruang">
+          <button id="keyboardAdd">Tambah ruang otomatis</button>
+          <button id="keyboardConnect">Hubungkan ruang terpilih</button>
+          <button id="keyboardDelete">Hapus ruang awal</button>
+        </div>
+        <span id="edgeSummary" class="hint">Belum ada koneksi.</span>
+      </details>
+      <div id="connMsg" class="hint" role="status"></div>
     </div>
 
     <!-- RIGHT: results table -->
@@ -153,8 +177,9 @@
       <div class="toolbar">
         <button id="calcBtn" class="primary">Hitung Semua Nilai</button>
       </div>
-      <div style="max-height:420px; overflow:auto;">
-        <table id="resultTable">
+      <p id="resultStatus" class="result-status" role="status"></p>
+      <div class="result-scroll" tabindex="0" role="region" aria-label="Hasil integrasi yang dapat digulir">
+        <table id="resultTable" aria-label="Hasil integrasi per ruang">
           <thead>
             <tr>
               <th>Ruang</th><th>Conn.</th><th>TD</th><th>MD</th><th>RA</th><th>D</th><th>RRA</th><th>Integration</th>
@@ -166,7 +191,8 @@
       <div class="legend">Integration rendah <div class="bar"></div> Integration tinggi</div>
       <div class="formula-note">
         MD = TD/(N−1) &nbsp;|&nbsp; RA = 2(MD−1)/(N−2) &nbsp;|&nbsp;
-        D = 2(N+1)[(log₂(N+2)/3)−1] / [(N−1)(N−2)] &nbsp;|&nbsp; RRA = RA/D &nbsp;|&nbsp; Integration = 1/RRA
+        D = 2{N[log₂((N+2)/3)−1]+1} / [(N−1)(N−2)] &nbsp;|&nbsp; RRA = RA/D &nbsp;|&nbsp; Integration = 1/RRA
+        <a href="https://github.com/SpaceGroupUCL/depthmapX/blob/master/genlib/pafmath.h" style="color:var(--accent)">Rujukan D-value</a>
       </div>
     </div>
   </div>
@@ -180,17 +206,19 @@
       <div class="stat"><div class="label">Persamaan Regresi</div><div class="val" id="statEq" style="font-size:14px;">–</div></div>
       <div class="stat"><div class="label">Interpretasi Kekuatan</div><div class="val" id="statInterp" style="font-size:14px;">–</div></div>
     </div>
-    <canvas id="chartCanvas" width="1180" height="320" style="margin-top:14px;"></canvas>
+    <p id="analysisStatus" class="warn" role="status"></p>
+    <canvas id="chartCanvas" width="1180" height="320" style="margin-top:14px;" role="img" aria-label="Grafik hubungan konektivitas dan integrasi. Nilai per ruang tersedia di tabel hasil."></canvas>
     <div class="formula-note">
       r = [nΣxy − ΣxΣy] / √{[nΣx²−(Σx)²][nΣy²−(Σy)²]} &nbsp;|&nbsp; regresi: ŷ = a + bx, dengan b = kemiringan (slope) hasil least-squares dan a = intersep.
     </div>
   </div>
-</div>
+</main>
 
 <script>
 (function(){
   const gCanvas = document.getElementById('graphCanvas');
   const gctx = gCanvas.getContext('2d');
+  const fontFamily = getComputedStyle(document.body).fontFamily;
   function fitCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; c.getContext('2d').setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
   fitCanvas(gCanvas);
   window.addEventListener('resize',()=>{fitCanvas(gCanvas); draw();});
@@ -201,17 +229,26 @@
   let mode = 'add';
   let pendingConnectFrom = null;
   let dragNode = null;
+  const roomFrom = document.getElementById('roomFrom');
+  const roomTo = document.getElementById('roomTo');
+  const connectButton = document.getElementById('keyboardConnect');
+  const deleteButton = document.getElementById('keyboardDelete');
+  const resultStatus = document.getElementById('resultStatus');
+  const analysisStatus = document.getElementById('analysisStatus');
+  const resultBody = document.querySelector('#resultTable tbody');
+  const feedback = document.getElementById('connMsg');
 
   const modeButtons = {add:'modeAdd', connect:'modeConnect', move:'modeMove', delete:'modeDelete'};
   function setMode(m){
-    mode = m; pendingConnectFrom = null; hideConnMsg();
-    Object.values(modeButtons).forEach(id=>document.getElementById(id).classList.remove('active'));
-    document.getElementById(modeButtons[m]).classList.add('active');
+    mode = m; pendingConnectFrom = null; feedback.textContent = '';
+    Object.entries(modeButtons).forEach(([key,id])=>{
+      const button = document.getElementById(id);
+      button.classList.toggle('active', key===m);
+      button.setAttribute('aria-pressed', key===m);
+    });
+    draw();
   }
   Object.keys(modeButtons).forEach(m=>document.getElementById(modeButtons[m]).addEventListener('click',()=>setMode(m)));
-
-  function showConnMsg(t){ const el=document.getElementById('connMsg'); el.textContent=t; el.style.display='block'; }
-  function hideConnMsg(){ document.getElementById('connMsg').style.display='none'; }
 
   function nodeAt(x,y){
     for(let i=nodes.length-1;i>=0;i--){
@@ -226,23 +263,89 @@
     return {x:e.clientX-r.left, y:e.clientY-r.top};
   }
 
+  function updateRoomControls(){
+    document.getElementById('nodeCount').textContent = 'N = '+nodes.length;
+    [roomFrom, roomTo].forEach((select, index)=>{
+      const previous = select.value;
+      select.replaceChildren(...nodes.map(n=>new Option(`Ruang ${n.id}`, n.id)));
+      select.selectedIndex = Math.min(index, nodes.length-1);
+      if(nodes.some(n=>String(n.id)===previous)) select.value = previous;
+      select.disabled = nodes.length===0;
+    });
+    connectButton.disabled = nodes.length<2;
+    deleteButton.disabled = nodes.length===0;
+    document.getElementById('edgeSummary').textContent = edges.length
+      ? `${edges.length} koneksi. ${edges.map(({a,b})=>`${a}–${b}`).join(', ')}.` : 'Belum ada koneksi.';
+  }
+
+  function updateGraph(message){
+    pendingConnectFrom = null;
+    dragNode = null;
+    nodes.forEach(n=>{ n.integration = null; });
+    updateRoomControls();
+    resetResults();
+    draw();
+    feedback.textContent = message;
+  }
+
+  function addRoom({x,y}){
+    const id = nextId++;
+    nodes.push({id,x,y,integration:null});
+    updateGraph(`Ruang ${id} ditambahkan.`);
+  }
+
+  function connectRooms(a,b){
+    if(a===b){ feedback.textContent = 'Pilih dua ruang yang berbeda.'; return; }
+    if(edges.some(edge=>(edge.a===a&&edge.b===b)||(edge.a===b&&edge.b===a))){
+      feedback.textContent = 'Kedua ruang sudah terhubung.';
+      return;
+    }
+    edges.push({a,b});
+    updateGraph(`Ruang ${a} dan ${b} dihubungkan.`);
+  }
+
+  function removeRoom(id){
+    nodes = nodes.filter(n=>n.id!==id);
+    edges = edges.filter(({a,b})=>a!==id&&b!==id);
+    updateGraph(`Ruang ${id} dihapus.`);
+  }
+
+  function automaticPosition(){
+    const {width,height} = gCanvas.getBoundingClientRect();
+    for(let y=26;y<height-20;y+=46){
+      for(let x=26;x<width-20;x+=46){
+        if(!nodes.some(n=>Math.hypot(n.x-x,n.y-y)<32)) return {x,y};
+      }
+    }
+    return {x:width/2,y:height/2};
+  }
+
+  document.getElementById('keyboardAdd').addEventListener('click',()=>addRoom(automaticPosition()));
+  connectButton.addEventListener('click',()=>connectRooms(Number(roomFrom.value),Number(roomTo.value)));
+  deleteButton.addEventListener('click',()=>{
+    removeRoom(Number(roomFrom.value));
+    if(deleteButton.disabled) document.getElementById('keyboardAdd').focus();
+  });
+  updateRoomControls();
+
   gCanvas.addEventListener('pointerdown', e=>{
     if(!e.isPrimary || e.button!==0) return;
     const p = canvasPos(e);
     if(mode==='add'){
-      if(nodeAt(p.x,p.y)) return;
-      nodes.push({id:nextId++, x:p.x, y:p.y, integration:null});
-      updateNodeCount(); draw();
+      if(!nodeAt(p.x,p.y)) addRoom(p);
     } else if(mode==='connect'){
       const n = nodeAt(p.x,p.y);
       if(!n) return;
-      if(!pendingConnectFrom){ pendingConnectFrom = n; showConnMsg('Ruang '+n.id+' dipilih — klik ruang tujuan.'); }
-      else if(pendingConnectFrom.id===n.id){ pendingConnectFrom=null; hideConnMsg(); }
-      else {
-        const exists = edges.some(ed=> (ed.a===pendingConnectFrom.id&&ed.b===n.id)||(ed.a===n.id&&ed.b===pendingConnectFrom.id));
-        if(!exists) edges.push({a:pendingConnectFrom.id, b:n.id});
-        pendingConnectFrom = null; hideConnMsg(); draw();
+      if(!pendingConnectFrom){
+        pendingConnectFrom = n;
+        feedback.textContent = `Ruang ${n.id} dipilih. Klik ruang tujuan.`;
+      } else {
+        const from = pendingConnectFrom.id;
+        pendingConnectFrom = null;
+        if(from===n.id) feedback.textContent = 'Pemilihan ruang dibatalkan.';
+        else connectRooms(from,n.id);
       }
+      draw();
     } else if(mode==='move'){
       const n = nodeAt(p.x,p.y);
       if(n){
@@ -251,11 +354,7 @@
       }
     } else if(mode==='delete'){
       const n = nodeAt(p.x,p.y);
-      if(n){
-        nodes = nodes.filter(x=>x.id!==n.id);
-        edges = edges.filter(ed=>ed.a!==n.id && ed.b!==n.id);
-        updateNodeCount(); draw();
-      }
+      if(n) removeRoom(n.id);
     }
   });
   gCanvas.addEventListener('pointermove', e=>{
@@ -265,8 +364,6 @@
     }
   });
   gCanvas.addEventListener('lostpointercapture', ()=>{dragNode=null;});
-
-  function updateNodeCount(){ document.getElementById('nodeCount').textContent = 'N = '+nodes.length; }
 
   function integrationColor(node){
     if(node.integration==null) return '#4a5568';
@@ -299,15 +396,15 @@
       gctx.lineWidth=2;
       gctx.strokeStyle = (pendingConnectFrom && pendingConnectFrom.id===n.id) ? '#e8b04b' : '#e7ebf1';
       gctx.stroke();
-      gctx.fillStyle = '#0d0f13';
-      gctx.font = '600 11px IBM Plex Mono, monospace';
+      gctx.fillStyle = n.integration==null ? '#fff' : '#0d0f13';
+      gctx.font = `650 12px ${fontFamily}`;
       gctx.textAlign='center'; gctx.textBaseline='middle';
       gctx.fillText(n.id, n.x, n.y);
     });
   }
 
   document.getElementById('clearAll').addEventListener('click', ()=>{
-    nodes=[]; edges=[]; nextId=1; updateNodeCount(); draw(); resetResults();
+    nodes=[]; edges=[]; nextId=1; updateGraph('Graf dikosongkan.');
   });
 
   document.getElementById('loadExample').addEventListener('click', ()=>{
@@ -324,18 +421,24 @@
     coords.forEach(c=> nodes.push({id:nextId++, x:cx+(c[0]-cx)*scale, y:cy+(c[1]-cy)*scale, integration:null}));
     const e = [[1,2],[1,3],[2,4],[2,5],[3,6],[3,7],[4,8],[5,8],[5,6],[6,9],[7,9],[5,9],[6,8]];
     e.forEach(p=> edges.push({a:p[0], b:p[1]}));
-    updateNodeCount(); draw(); resetResults();
+    updateGraph('Contoh dimuat. Pilih Hitung Semua Nilai untuk melihat hasil.');
   });
 
   function resetResults(){
-    document.getElementById('resultTable').querySelector('tbody').innerHTML =
-      '<tr><td colspan="8" style="text-align:center;color:var(--muted);">Belum ada data — bangun graph lalu klik Hitung</td></tr>';
+    showResultStatus('');
+    analysisStatus.textContent = '';
+    resultBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);">Pilih Hitung Semua Nilai untuk graf saat ini.</td></tr>';
     document.getElementById('statR').textContent='–';
     document.getElementById('statR2').textContent='–';
     document.getElementById('statEq').textContent='–';
     document.getElementById('statInterp').textContent='–';
     const cctx = document.getElementById('chartCanvas').getContext('2d');
     cctx.clearRect(0,0,9999,9999);
+  }
+
+  function showResultStatus(message, warning=false){
+    resultStatus.classList.toggle('warn', warning);
+    resultStatus.textContent = message;
   }
 
   // ---------- COMPUTATION ----------
@@ -358,36 +461,31 @@
   }
 
   document.getElementById('calcBtn').addEventListener('click', ()=>{
+    resetResults();
     const N = nodes.length;
-    const tbody = document.getElementById('resultTable').querySelector('tbody');
     if(N < 3){
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--warm);">Minimal 3 ruang (node) diperlukan untuk menghitung RA/D/RRA.</td></tr>';
+      showResultStatus('Tambahkan minimal 3 ruang untuk menghitung integrasi.', true);
       return;
     }
     const adj = buildAdjacency();
-    let disconnected = false;
-    const rows = [];
-
-    nodes.forEach(n=>{
-      const dist = bfsDepths(n.id, adj);
-      let TD = 0, reachable = 0;
-      nodes.forEach(m=>{
-        if(m.id===n.id) return;
-        if(dist[m.id]===Infinity){ disconnected = true; }
-        else { TD += dist[m.id]; reachable++; }
-      });
+    if(Object.values(bfsDepths(nodes[0].id,adj)).includes(Infinity)){
+      showResultStatus('Hubungkan semua ruang sebelum menghitung integrasi.', true);
+      return;
+    }
+    const D = 2*(N*(Math.log2((N+2)/3)-1)+1)/((N-1)*(N-2));
+    const rows = nodes.map(n=>{
+      const TD = Object.values(bfsDepths(n.id,adj)).reduce((total,depth)=>total+depth,0);
       const connectivity = adj[n.id].length;
       const MD = TD/(N-1);
       const RA = 2*(MD-1)/(N-2);
-      const D = (2*(N+1)*((Math.log2(N+2)/3)-1)) / ((N-1)*(N-2));
       const RRA = RA/D;
-      const Integration = 1/RRA;
+      const Integration = RRA>0 ? 1/RRA : null;
       n.integration = Integration;
-      rows.push({id:n.id, connectivity, TD, MD, RA, D, RRA, Integration});
+      return {id:n.id, connectivity, TD, MD, RA, D, RRA, Integration};
     });
 
     rows.sort((a,b)=>a.id-b.id);
-    tbody.innerHTML = rows.map(row=>{
+    resultBody.innerHTML = rows.map(row=>{
       const node = nodes.find(n=>n.id===row.id);
       const color = integrationColor(node);
       return `<tr>
@@ -398,18 +496,18 @@
         <td>${row.RA.toFixed(3)}</td>
         <td>${row.D.toFixed(3)}</td>
         <td>${row.RRA.toFixed(3)}</td>
-        <td>${row.Integration.toFixed(3)}</td>
+        <td>${row.Integration===null ? '—' : row.Integration.toFixed(3)}</td>
       </tr>`;
     }).join('');
 
-    if(disconnected){
-      const warnRow = document.createElement('tr');
-      warnRow.innerHTML = '<td colspan="8" style="text-align:center;color:var(--warm);">Peringatan: graph tidak sepenuhnya terhubung — beberapa ruang tidak dapat dijangkau, TD dihitung hanya dari ruang yang terjangkau.</td>';
-      tbody.appendChild(warnRow);
-    }
-
     draw();
-    computeCorrelationAndRegression(rows);
+    const finiteRows = rows.filter(row=>Number.isFinite(row.Integration));
+    if(finiteRows.length!==rows.length){
+      showResultStatus('Integrasi dengan RRA = 0 tidak berhingga. Ruang tersebut tidak disertakan dalam korelasi.', true);
+    } else {
+      showResultStatus(`Hasil integrasi tersedia untuk ${rows.length} ruang.`);
+    }
+    computeCorrelationAndRegression(finiteRows);
   });
 
   // ---------- PEARSON + REGRESSION ----------
@@ -417,19 +515,20 @@
     const x = rows.map(r=>r.connectivity);
     const y = rows.map(r=>r.Integration);
     const n = x.length;
-    const sumX = x.reduce((a,b)=>a+b,0);
-    const sumY = y.reduce((a,b)=>a+b,0);
-    const sumXY = x.reduce((s,xi,i)=>s+xi*y[i],0);
-    const sumX2 = x.reduce((s,xi)=>s+xi*xi,0);
-    const sumY2 = y.reduce((s,yi)=>s+yi*yi,0);
-
-    const numerator = n*sumXY - sumX*sumY;
-    const denom = Math.sqrt((n*sumX2 - sumX*sumX)*(n*sumY2 - sumY*sumY));
-    const r = denom===0 ? 0 : numerator/denom;
+    if(n<2 || x.every(value=>value===x[0]) || y.every(value=>value===y[0])){
+      analysisStatus.textContent = 'Korelasi memerlukan minimal dua pasangan nilai berhingga dengan variasi pada kedua variabel.';
+      return;
+    }
+    const meanX = x.reduce((sum,value)=>sum+value,0)/n;
+    const meanY = y.reduce((sum,value)=>sum+value,0)/n;
+    const spreadX = x.reduce((sum,value)=>sum+(value-meanX)**2,0);
+    const spreadY = y.reduce((sum,value)=>sum+(value-meanY)**2,0);
+    const covariance = x.reduce((sum,value,index)=>sum+(value-meanX)*(y[index]-meanY),0);
+    const r = Math.max(-1,Math.min(1,covariance/Math.sqrt(spreadX*spreadY)));
     const r2 = r*r;
 
-    const b = (n*sumX2 - sumX*sumX)===0 ? 0 : numerator/(n*sumX2 - sumX*sumX);
-    const a = (sumY - b*sumX)/n;
+    const b = covariance/spreadX;
+    const a = meanY-b*meanX;
 
     document.getElementById('statR').textContent = r.toFixed(4);
     document.getElementById('statR2').textContent = r2.toFixed(4);
@@ -468,7 +567,7 @@
     ctx.strokeStyle = '#2e3542'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+plotH); ctx.lineTo(pad.l+plotW,pad.t+plotH); ctx.stroke();
 
-    ctx.fillStyle = '#8993a4'; ctx.font='11px IBM Plex Mono, monospace';
+    ctx.fillStyle = '#8993a4'; ctx.font = `11px ${fontFamily}`;
     ctx.textAlign='center';
     ctx.fillText('Connectivity', pad.l+plotW/2, H-8);
     ctx.save(); ctx.translate(14, pad.t+plotH/2); ctx.rotate(-Math.PI/2); ctx.fillText('Integration', 0,0); ctx.restore();

@@ -1,0 +1,19 @@
+:root {
+  /* Select SF Pro through the native system font on Apple platforms. */
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", sans-serif;
+  --heading-ratio: 1.314;
+}
+
+body {
+  --heading-h1: clamp(2.25rem, 1.45rem + 2.85vw, 3.75rem);
+  --heading-h2: calc(var(--heading-h1) / var(--heading-ratio));
+  --heading-h3: calc(var(--heading-h2) / var(--heading-ratio));
+  --heading-h4: calc(var(--heading-h3) / var(--heading-ratio));
+  --heading-h5: calc(var(--heading-h4) / var(--heading-ratio));
+}
+
+h1 { font-size: var(--heading-h1); }
+h2 { font-size: var(--heading-h2); }
+h3 { font-size: var(--heading-h3); }
+h4 { font-size: var(--heading-h4); }
+h5 { font-size: var(--heading-h5); }
