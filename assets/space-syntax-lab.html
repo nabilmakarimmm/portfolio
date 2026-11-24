@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Space Syntax Lab — Simulasi J-Graph &amp; Integration</title>
+<style>
+  @font-face{font-family:Montserrat;src:url('Montserrat-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
+  @font-face{font-family:Montserrat;src:url('Montserrat-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap;}
+  :root{
+    --bg:#14171c;
+    --panel:#1c2129;
+    --panel-2:#232935;
+    --line:#2e3542;
+    --text:#e7ebf1;
+    --muted:#8993a4;
+    --accent:#e8b04b;      /* amber — used sparingly, "high integration" */
+    --cold:#3f7fd1;        /* blue — "low integration" */
+    --warm:#d1483f;        /* red — "high integration" */
+    --mono:'IBM Plex Mono', 'Courier New', monospace;
+    --sans:Montserrat,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  header{
+    padding:22px 28px 14px 28px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  }
+  header .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+    color:var(--accent); text-transform:uppercase;
+  }
+  h1{font-size:20px; margin:0; font-weight:650; letter-spacing:.2px;}
+  header p{margin:0; color:var(--muted); font-size:13px; font-family:var(--mono);}
+  .portfolio-link{display:inline-block;margin:0 28px 14px;color:var(--accent);font-size:13px;text-underline-offset:4px;}
+
+  .wrap{max-width:1280px; margin:0 auto; padding:20px 24px 60px;}
+  .grid{display:grid; grid-template-columns: 1.15fr 1fr; gap:20px;}
+  @media(max-width:980px){.grid{grid-template-columns:1fr;}}
+
+  .card{
+    min-width:0;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px 18px;
+  }
+  .card h2{
+    font-size:13px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.09em;
+    color:var(--muted); font-weight:600; display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .n{
+    font-family:var(--mono); color:var(--accent); font-size:12px; border:1px solid var(--line);
+    background:var(--panel-2); border-radius:4px; padding:1px 7px;
+  }
+
+  .toolbar{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;}
+  button{
+    font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--text);
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    padding:7px 12px; cursor:pointer; transition:.12s;
+  }
+  button:hover{border-color:var(--accent); color:var(--accent);}
+  button.active{background:var(--accent); color:#1a1a1a; border-color:var(--accent);}
+  button.ghost{background:transparent;}
+  button.primary{background:var(--warm); border-color:var(--warm); color:#fff;}
+  button.primary:hover{color:#fff; opacity:.9;}
+
+  #graphCanvas{
+    width:100%; height:420px; display:block; border-radius:8px;
+    background:
+      linear-gradient(var(--panel-2) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(90deg, var(--panel-2) 1px, transparent 1px) 0 0/24px 24px,
+      var(--bg);
+    border:1px solid var(--line); cursor:crosshair;
+  }
+  .hint{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:8px; line-height:1.6;}
+  .hint b{color:var(--text);}
+
+  table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px;}
+  th,td{padding:6px 8px; text-align:right; border-bottom:1px solid var(--line);}
+  th:first-child,td:first-child{text-align:left;}
+  th{color:var(--muted); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;}
+  tbody tr:hover{background:var(--panel-2);}
+  .node-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle;}
+
+  .stat-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;}
+  .stat{
+    flex:1; min-width:120px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:8px; padding:10px 12px;
+  }
+  .stat .label{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+  .stat .val{font-family:var(--mono); font-size:19px; font-weight:600; margin-top:2px;}
+  .stat .val.warm{color:var(--warm);}
+  .stat .val.cold{color:var(--cold);}
+  .stat .val.accent{color:var(--accent);}
+
+  .legend{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:8px;}
+  .legend .bar{width:120px; height:8px; border-radius:4px; background:linear-gradient(90deg, var(--cold), #7d8fae 40%, var(--warm));}
+
+  #chartCanvas{width:100%; height:320px; display:block; background:var(--bg); border:1px solid var(--line); border-radius:8px;}
+
+  .formula-note{font-family:var(--mono); font-size:10.5px; color:var(--muted); line-height:1.7; margin-top:6px;}
+  .warn{color:var(--warm); font-family:var(--mono); font-size:12px; margin-top:8px;}
+  .ok{color:#5fbf7c; font-family:var(--mono); font-size:12px; margin-top:8px;}
+
+  ::selection{background:var(--accent); color:#1a1a1a;}
+  #graphCanvas{touch-action:none;}
+  @media(max-width:540px){
+    .wrap{padding-inline:12px;}
+    .card{padding:12px;}
+    #graphCanvas{height:310px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="eyebrow">Space Syntax Lab</span>
+  <h1>J-Graph, Integration &amp; Regresi</h1>
+  <p>convex space → depth → integration → korelasi</p>
+</header>
+<a class="portfolio-link" href="../planning.html">Kembali ke portofolio GIS</a>
+
+<div class="wrap">
+  <div class="grid">
+
+    <!-- LEFT: Graph builder -->
+    <div class="card">
+      <h2>01 · Bangun J-Graph <span class="n" id="nodeCount">N = 0</span></h2>
+      <div class="toolbar">
+        <button id="modeAdd" class="active">+ Tambah Ruang</button>
+        <button id="modeConnect">⟷ Hubungkan</button>
+        <button id="modeMove">✥ Geser</button>
+        <button id="modeDelete">✕ Hapus</button>
+        <button id="loadExample" class="ghost">Muat Contoh</button>
+        <button id="clearAll" class="ghost">Bersihkan</button>
+      </div>
+      <canvas id="graphCanvas" width="900" height="420"></canvas>
+      <div class="hint">
+        <b>Tambah Ruang</b>: klik kanvas untuk menempatkan node (ruang/segmen).<br>
+        <b>Hubungkan</b>: klik node A lalu node B untuk membuat koneksi (edge).<br>
+        <b>Geser</b>: seret node untuk merapikan tata letak.<br>
+        <b>Hapus</b>: klik node untuk menghapusnya beserta koneksinya.
+      </div>
+      <div id="connMsg" class="warn" style="display:none;"></div>
+    </div>
+
+    <!-- RIGHT: results table -->
+    <div class="card">
+      <h2>02 · Tabel Perhitungan Integration</h2>
+      <div class="toolbar">
+        <button id="calcBtn" class="primary">Hitung Semua Nilai</button>
+      </div>
+      <div style="max-height:420px; overflow:auto;">
+        <table id="resultTable">
+          <thead>
+            <tr>
+              <th>Ruang</th><th>Conn.</th><th>TD</th><th>MD</th><th>RA</th><th>D</th><th>RRA</th><th>Integration</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="8" style="text-align:center;color:var(--muted);">Belum ada data — bangun graph lalu klik Hitung</td></tr></tbody>
+        </table>
+      </div>
+      <div class="legend">Integration rendah <div class="bar"></div> Integration tinggi</div>
+      <div class="formula-note">
+        MD = TD/(N−1) &nbsp;|&nbsp; RA = 2(MD−1)/(N−2) &nbsp;|&nbsp;
+        D = 2(N+1)[(log₂(N+2)/3)−1] / [(N−1)(N−2)] &nbsp;|&nbsp; RRA = RA/D &nbsp;|&nbsp; Integration = 1/RRA
+      </div>
+    </div>
+  </div>
+
+  <!-- Correlation + regression -->
+  <div class="card" style="margin-top:20px;">
+    <h2>03 · Korelasi Pearson &amp; Regresi Linear Sederhana <span class="n">Connectivity (x) vs Integration (y)</span></h2>
+    <div class="stat-row" id="statRow">
+      <div class="stat"><div class="label">Koefisien r (Pearson)</div><div class="val" id="statR">–</div></div>
+      <div class="stat"><div class="label">R²</div><div class="val accent" id="statR2">–</div></div>
+      <div class="stat"><div class="label">Persamaan Regresi</div><div class="val" id="statEq" style="font-size:14px;">–</div></div>
+      <div class="stat"><div class="label">Interpretasi Kekuatan</div><div class="val" id="statInterp" style="font-size:14px;">–</div></div>
+    </div>
+    <canvas id="chartCanvas" width="1180" height="320" style="margin-top:14px;"></canvas>
+    <div class="formula-note">
+      r = [nΣxy − ΣxΣy] / √{[nΣx²−(Σx)²][nΣy²−(Σy)²]} &nbsp;|&nbsp; regresi: ŷ = a + bx, dengan b = kemiringan (slope) hasil least-squares dan a = intersep.
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const gCanvas = document.getElementById('graphCanvas');
+  const gctx = gCanvas.getContext('2d');
+  function fitCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; c.getContext('2d').setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+  fitCanvas(gCanvas);
+  window.addEventListener('resize',()=>{fitCanvas(gCanvas); draw();});
+
+  let nodes = [];   // {id, x, y, integration}
+  let edges = [];   // {a,b} ids
+  let nextId = 1;
+  let mode = 'add';
+  let pendingConnectFrom = null;
+  let dragNode = null;
+
+  const modeButtons = {add:'modeAdd', connect:'modeConnect', move:'modeMove', delete:'modeDelete'};
+  function setMode(m){
+    mode = m; pendingConnectFrom = null; hideConnMsg();
+    Object.values(modeButtons).forEach(id=>document.getElementById(id).classList.remove('active'));
+    document.getElementById(modeButtons[m]).classList.add('active');
+  }
+  Object.keys(modeButtons).forEach(m=>document.getElementById(modeButtons[m]).addEventListener('click',()=>setMode(m)));
+
+  function showConnMsg(t){ const el=document.getElementById('connMsg'); el.textContent=t; el.style.display='block'; }
+  function hideConnMsg(){ document.getElementById('connMsg').style.display='none'; }
+
+  function nodeAt(x,y){
+    for(let i=nodes.length-1;i>=0;i--){
+      const n=nodes[i]; const dx=n.x-x, dy=n.y-y;
+      if(Math.sqrt(dx*dx+dy*dy) <= 16) return n;
+    }
+    return null;
+  }
+
+  function canvasPos(e){
+    const r = gCanvas.getBoundingClientRect();
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
+  }
+
+  gCanvas.addEventListener('pointerdown', e=>{
+    if(!e.isPrimary || e.button!==0) return;
+    const p = canvasPos(e);
+    if(mode==='add'){
+      if(nodeAt(p.x,p.y)) return;
+      nodes.push({id:nextId++, x:p.x, y:p.y, integration:null});
+      updateNodeCount(); draw();
+    } else if(mode==='connect'){
+      const n = nodeAt(p.x,p.y);
+      if(!n) return;
+      if(!pendingConnectFrom){ pendingConnectFrom = n; showConnMsg('Ruang '+n.id+' dipilih — klik ruang tujuan.'); }
+      else if(pendingConnectFrom.id===n.id){ pendingConnectFrom=null; hideConnMsg(); }
+      else {
+        const exists = edges.some(ed=> (ed.a===pendingConnectFrom.id&&ed.b===n.id)||(ed.a===n.id&&ed.b===pendingConnectFrom.id));
+        if(!exists) edges.push({a:pendingConnectFrom.id, b:n.id});
+        pendingConnectFrom = null; hideConnMsg(); draw();
+      }
+    } else if(mode==='move'){
+      const n = nodeAt(p.x,p.y);
+      if(n){
+        dragNode = n;
+        gCanvas.setPointerCapture(e.pointerId);
+      }
+    } else if(mode==='delete'){
+      const n = nodeAt(p.x,p.y);
+      if(n){
+        nodes = nodes.filter(x=>x.id!==n.id);
+        edges = edges.filter(ed=>ed.a!==n.id && ed.b!==n.id);
+        updateNodeCount(); draw();
+      }
+    }
+  });
+  gCanvas.addEventListener('pointermove', e=>{
+    if(mode==='move' && dragNode && e.isPrimary){
+      const p = canvasPos(e);
+      dragNode.x = p.x; dragNode.y = p.y; draw();
+    }
+  });
+  gCanvas.addEventListener('lostpointercapture', ()=>{dragNode=null;});
+
+  function updateNodeCount(){ document.getElementById('nodeCount').textContent = 'N = '+nodes.length; }
+
+  function integrationColor(node){
+    if(node.integration==null) return '#4a5568';
+    const vals = nodes.map(n=>n.integration).filter(v=>v!=null);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const t = max>min ? (node.integration-min)/(max-min) : 0.5;
+    // blue (cold, low) -> gray -> red (warm, high)
+    const c1=[63,127,209], c2=[125,143,174], c3=[209,72,63];
+    let r,g,b;
+    if(t<0.5){ const tt=t/0.5; r=c1[0]+(c2[0]-c1[0])*tt; g=c1[1]+(c2[1]-c1[1])*tt; b=c1[2]+(c2[2]-c1[2])*tt; }
+    else { const tt=(t-0.5)/0.5; r=c2[0]+(c3[0]-c2[0])*tt; g=c2[1]+(c3[1]-c2[1])*tt; b=c2[2]+(c3[2]-c2[2])*tt; }
+    return `rgb(${r|0},${g|0},${b|0})`;
+  }
+
+  function draw(){
+    const r = gCanvas.getBoundingClientRect();
+    gctx.clearRect(0,0,r.width,r.height);
+    // edges
+    gctx.strokeStyle = '#4a5568'; gctx.lineWidth = 1.6;
+    edges.forEach(ed=>{
+      const a = nodes.find(n=>n.id===ed.a), b = nodes.find(n=>n.id===ed.b);
+      if(!a||!b) return;
+      gctx.beginPath(); gctx.moveTo(a.x,a.y); gctx.lineTo(b.x,b.y); gctx.stroke();
+    });
+    // nodes
+    nodes.forEach(n=>{
+      gctx.beginPath(); gctx.arc(n.x,n.y,15,0,Math.PI*2);
+      gctx.fillStyle = integrationColor(n);
+      gctx.fill();
+      gctx.lineWidth=2;
+      gctx.strokeStyle = (pendingConnectFrom && pendingConnectFrom.id===n.id) ? '#e8b04b' : '#e7ebf1';
+      gctx.stroke();
+      gctx.fillStyle = '#0d0f13';
+      gctx.font = '600 11px IBM Plex Mono, monospace';
+      gctx.textAlign='center'; gctx.textBaseline='middle';
+      gctx.fillText(n.id, n.x, n.y);
+    });
+  }
+
+  document.getElementById('clearAll').addEventListener('click', ()=>{
+    nodes=[]; edges=[]; nextId=1; updateNodeCount(); draw(); resetResults();
+  });
+
+  document.getElementById('loadExample').addEventListener('click', ()=>{
+    nodes=[]; edges=[]; nextId=1;
+    const r = gCanvas.getBoundingClientRect();
+    const cx=r.width/2, cy=r.height/2-10;
+    // sample star + ring hybrid J-graph (mimics a small SWK access network)
+    const coords = [
+      [cx,cy-140],[cx-160,cy-60],[cx+160,cy-60],
+      [cx-220,cy+70],[cx-70,cy+70],[cx+70,cy+70],[cx+220,cy+70],
+      [cx-140,cy+170],[cx+140,cy+170]
+    ];
+    const scale = Math.min(1, (r.width-40)/440, (r.height-40)/340);
+    coords.forEach(c=> nodes.push({id:nextId++, x:cx+(c[0]-cx)*scale, y:cy+(c[1]-cy)*scale, integration:null}));
+    const e = [[1,2],[1,3],[2,4],[2,5],[3,6],[3,7],[4,8],[5,8],[5,6],[6,9],[7,9],[5,9],[6,8]];
+    e.forEach(p=> edges.push({a:p[0], b:p[1]}));
+    updateNodeCount(); draw(); resetResults();
+  });
+
+  function resetResults(){
+    document.getElementById('resultTable').querySelector('tbody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;color:var(--muted);">Belum ada data — bangun graph lalu klik Hitung</td></tr>';
+    document.getElementById('statR').textContent='–';
+    document.getElementById('statR2').textContent='–';
+    document.getElementById('statEq').textContent='–';
+    document.getElementById('statInterp').textContent='–';
+    const cctx = document.getElementById('chartCanvas').getContext('2d');
+    cctx.clearRect(0,0,9999,9999);
+  }
+
+  // ---------- COMPUTATION ----------
+  function buildAdjacency(){
+    const adj = {};
+    nodes.forEach(n=> adj[n.id]=[]);
+    edges.forEach(ed=>{ adj[ed.a].push(ed.b); adj[ed.b].push(ed.a); });
+    return adj;
+  }
+
+  function bfsDepths(startId, adj){
+    const dist = {}; nodes.forEach(n=> dist[n.id]=Infinity);
+    dist[startId]=0;
+    const q=[startId];
+    while(q.length){
+      const cur=q.shift();
+      adj[cur].forEach(nb=>{ if(dist[nb]===Infinity){ dist[nb]=dist[cur]+1; q.push(nb);} });
+    }
+    return dist;
+  }
+
+  document.getElementById('calcBtn').addEventListener('click', ()=>{
+    const N = nodes.length;
+    const tbody = document.getElementById('resultTable').querySelector('tbody');
+    if(N < 3){
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--warm);">Minimal 3 ruang (node) diperlukan untuk menghitung RA/D/RRA.</td></tr>';
+      return;
+    }
+    const adj = buildAdjacency();
+    let disconnected = false;
+    const rows = [];
+
+    nodes.forEach(n=>{
+      const dist = bfsDepths(n.id, adj);
+      let TD = 0, reachable = 0;
+      nodes.forEach(m=>{
+        if(m.id===n.id) return;
+        if(dist[m.id]===Infinity){ disconnected = true; }
+        else { TD += dist[m.id]; reachable++; }
+      });
+      const connectivity = adj[n.id].length;
+      const MD = TD/(N-1);
+      const RA = 2*(MD-1)/(N-2);
+      const D = (2*(N+1)*((Math.log2(N+2)/3)-1)) / ((N-1)*(N-2));
+      const RRA = RA/D;
+      const Integration = 1/RRA;
+      n.integration = Integration;
+      rows.push({id:n.id, connectivity, TD, MD, RA, D, RRA, Integration});
+    });
+
+    rows.sort((a,b)=>a.id-b.id);
+    tbody.innerHTML = rows.map(row=>{
+      const node = nodes.find(n=>n.id===row.id);
+      const color = integrationColor(node);
+      return `<tr>
+        <td><span class="node-dot" style="background:${color}"></span>Ruang ${row.id}</td>
+        <td>${row.connectivity}</td>
+        <td>${row.TD.toFixed(2)}</td>
+        <td>${row.MD.toFixed(3)}</td>
+        <td>${row.RA.toFixed(3)}</td>
+        <td>${row.D.toFixed(3)}</td>
+        <td>${row.RRA.toFixed(3)}</td>
+        <td>${row.Integration.toFixed(3)}</td>
+      </tr>`;
+    }).join('');
+
+    if(disconnected){
+      const warnRow = document.createElement('tr');
+      warnRow.innerHTML = '<td colspan="8" style="text-align:center;color:var(--warm);">Peringatan: graph tidak sepenuhnya terhubung — beberapa ruang tidak dapat dijangkau, TD dihitung hanya dari ruang yang terjangkau.</td>';
+      tbody.appendChild(warnRow);
+    }
+
+    draw();
+    computeCorrelationAndRegression(rows);
+  });
+
+  // ---------- PEARSON + REGRESSION ----------
+  function computeCorrelationAndRegression(rows){
+    const x = rows.map(r=>r.connectivity);
+    const y = rows.map(r=>r.Integration);
+    const n = x.length;
+    const sumX = x.reduce((a,b)=>a+b,0);
+    const sumY = y.reduce((a,b)=>a+b,0);
+    const sumXY = x.reduce((s,xi,i)=>s+xi*y[i],0);
+    const sumX2 = x.reduce((s,xi)=>s+xi*xi,0);
+    const sumY2 = y.reduce((s,yi)=>s+yi*yi,0);
+
+    const numerator = n*sumXY - sumX*sumY;
+    const denom = Math.sqrt((n*sumX2 - sumX*sumX)*(n*sumY2 - sumY*sumY));
+    const r = denom===0 ? 0 : numerator/denom;
+    const r2 = r*r;
+
+    const b = (n*sumX2 - sumX*sumX)===0 ? 0 : numerator/(n*sumX2 - sumX*sumX);
+    const a = (sumY - b*sumX)/n;
+
+    document.getElementById('statR').textContent = r.toFixed(4);
+    document.getElementById('statR2').textContent = r2.toFixed(4);
+    document.getElementById('statEq').textContent = `ŷ = ${a.toFixed(3)} ${b>=0?'+':'−'} ${Math.abs(b).toFixed(3)}x`;
+
+    const absR = Math.abs(r);
+    let interp = 'Sangat lemah';
+    if(absR>=0.9) interp='Sangat kuat';
+    else if(absR>=0.7) interp='Kuat';
+    else if(absR>=0.5) interp='Sedang';
+    else if(absR>=0.3) interp='Lemah';
+    document.getElementById('statInterp').textContent = interp + (r>=0?' (+)':' (−)');
+
+    drawChart(x,y,a,b);
+  }
+
+  function drawChart(x,y,a,b){
+    const canvas = document.getElementById('chartCanvas');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width*devicePixelRatio; canvas.height = rect.height*devicePixelRatio;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    const W = rect.width, H = rect.height;
+    ctx.clearRect(0,0,W,H);
+
+    const pad = {l:56,r:26,t:20,b:44};
+    const plotW = W-pad.l-pad.r, plotH = H-pad.t-pad.b;
+
+    const xMin = Math.min(...x)-0.5, xMax = Math.max(...x)+0.5;
+    const yMin = Math.min(...y)*0.9, yMax = Math.max(...y)*1.1;
+
+    function sx(v){ return pad.l + (v-xMin)/(xMax-xMin)*plotW; }
+    function sy(v){ return pad.t + plotH - (v-yMin)/(yMax-yMin)*plotH; }
+
+    // axes
+    ctx.strokeStyle = '#2e3542'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+plotH); ctx.lineTo(pad.l+plotW,pad.t+plotH); ctx.stroke();
+
+    ctx.fillStyle = '#8993a4'; ctx.font='11px IBM Plex Mono, monospace';
+    ctx.textAlign='center';
+    ctx.fillText('Connectivity', pad.l+plotW/2, H-8);
+    ctx.save(); ctx.translate(14, pad.t+plotH/2); ctx.rotate(-Math.PI/2); ctx.fillText('Integration', 0,0); ctx.restore();
+
+    // ticks
+    for(let i=0;i<=4;i++){
+      const xv = xMin + (xMax-xMin)*i/4;
+      const yv = yMin + (yMax-yMin)*i/4;
+      ctx.fillStyle='#8993a4';
+      ctx.textAlign='center';
+      ctx.fillText(xv.toFixed(1), sx(xv), pad.t+plotH+16);
+      ctx.textAlign='right';
+      ctx.fillText(yv.toFixed(2), pad.l-8, sy(yv)+3);
+    }
+
+    // regression line
+    ctx.strokeStyle = '#e8b04b'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(sx(xMin), sy(a+b*xMin));
+    ctx.lineTo(sx(xMax), sy(a+b*xMax));
+    ctx.stroke();
+
+    // points
+    x.forEach((xi,i)=>{
+      ctx.beginPath();
+      ctx.arc(sx(xi), sy(y[i]), 5, 0, Math.PI*2);
+      ctx.fillStyle = '#d1483f';
+      ctx.globalAlpha=0.85;
+      ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.strokeStyle='#e7ebf1'; ctx.lineWidth=1; ctx.stroke();
+    });
+  }
+
+  draw();
+})();
+</script>
+</body>
+</html>
